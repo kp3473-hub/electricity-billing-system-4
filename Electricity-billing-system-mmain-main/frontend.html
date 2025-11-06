@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meter Reading Input | Admin Portal</title>
+    <style>
+
+        body { font-family: 'Roboto', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .admin-container { max-width: 900px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        /* --- Search Section --- */
+        .search-section { padding: 20px; background-color: #e9ecef; border-radius: 6px; margin-bottom: 30px; }
+        .search-section label { font-weight: bold; display: block; margin-bottom: 8px; }
+        .search-section input[type="text"] { width: 70%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        .search-section button { padding: 10px 20px; margin-left: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; }
+        .search-section button:hover { background-color: #1e7e34; }
+
+        /* --- Customer Result --- */
+        #customer-result { border: 1px solid #0056b3; padding: 15px; border-radius: 4px; margin-top: 20px; background-color: #f8f9fa; display: none; }
+        #customer-result p { margin: 5px 0; }
+        .status-active { color: #28a745; font-weight: bold; }
+        
+        /* --- Reading Input Form --- */
+        .input-form { padding: 20px; border: 1px solid #ccc; border-radius: 6px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        .previous-reading { background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+        .submit-btn { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1.1em; margin-top: 10px; }
+        .submit-btn:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-container">
+        <h2>📊 New Meter Reading & Bill Generation</h2>
+        
+        <div class="search-section">
+            <h3>Find Customer</h3>
+            <label for="account-search">Search by Account ID or Meter ID:</label>
+            <input type="text" id="account-search" placeholder="e.g., 123456 or MTR-9876" required>
+            <button onclick="searchCustomer()">Search</button>
+            
+            <div id="customer-result">
+                <h4>Customer Found:</h4>
+                <p><strong>Name:</strong> <span id="cust-name"></span></p>
+                <p><strong>Address:</strong> <span id="cust-address"></span></p>
+                <p><strong>Account ID:</strong> <span id="cust-id"></span></p>
+                <p><strong>Status:</strong> <span id="cust-status" class="status-active"></span></p>
+            </div>
+        </div>
+
+        <div class="input-form" id="reading-input-form" style="display: none;">
+            <h3>Input Meter Reading</h3>
+            <form onsubmit="generateBill(event)">
+                
+                <div class="previous-reading">
+                    <p><strong>Last Reading Date:</strong> <span id="prev-date">Oct 31, 2025</span></p>
+                    <p><strong>Last Reading Value:</strong> <span id="prev-units">5678</span> kWh</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="reading-date">Date of New Reading:</label>
+                    <input type="date" id="reading-date" value="2025-11-30" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="current-reading">Current Meter Reading (kWh):</label>
+                    <input type="number" id="current-reading" name="current-reading" min="5679" placeholder="Enter current meter reading" required>
+                    <small>Must be higher than the previous reading (5678).</small>
+                </div>
+
+                <button type="submit" class="submit-btn">✅ Calculate & Generate Bill</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Simulate a backend customer search
+        const customerDatabase = {
+            '123456': {
+                name: 'Jane Doe',
+                address: '456 Oak St, City, 12345',
+                status: 'Active',
+                previousReading: 5678,
+                previousDate: '2025-10-31'
+            }
+        };
+
+        function searchCustomer() {
+            const searchInput = document.getElementById('account-search').value.trim();
+            const resultDiv = document.getElementById('customer-result');
+            const formDiv = document.getElementById('reading-input-form');
+            
+            if (customerDatabase[searchInput]) {
+                const customer = customerDatabase[searchInput];
+                
+                // Populate Customer Details
+                document.getElementById('cust-name').textContent = customer.name;
+                document.getElementById('cust-address').textContent = customer.address;
+                document.getElementById('cust-id').textContent = searchInput;
+                document.getElementById('cust-status').textContent = customer.status;
+
+                // Populate Previous Reading Details
+                document.getElementById('prev-date').textContent = customer.previousDate;
+                document.getElementById('prev-units').textContent = customer.previousReading;
+                document.getElementById('current-reading').min = customer.previousReading + 1;
+
+                // Show result and input form
+                resultDiv.style.display = 'block';
+                formDiv.style.display = 'block';
+                alert('Customer found and form enabled.');
+
+            } else {
+                resultDiv.style.display = 'none';
+                formDiv.style.display = 'none';
+                alert('Error: Customer not found. Please try another ID.');
+            }
+        }
+
+        // Simulate bill generation (would involve an AJAX call to your Java backend)
+        function generateBill(event) {
+            event.preventDefault(); // Stop form submission
+            
+            const customerId = document.getElementById('cust-id').textContent;
+            const currentReading = parseInt(document.getElementById('current-reading').value);
+            const previousReading = parseInt(document.getElementById('prev-units').textContent);
+            const readingDate = document.getElementById('reading-date').value;
+
+            const unitsConsumed = currentReading - previousReading;
+
+            if (unitsConsumed < 0) {
+                alert('Error: Current reading must be greater than the previous reading.');
+                return;
+            }
+
+            // This is where an AJAX call would send the following data to your Java backend:
+            // - customerId (UUID)
+            // - currentReading
+            // - previousReading
+            // - readingDate
+            
+            console.log({
+                customerId: customerId,
+                unitsConsumed: unitsConsumed,
+                newReading: currentReading,
+                readingDate: readingDate
+            });
+
+            // If successful:
+            alert(`Bill for Customer ${customerId} generated successfully! Units Consumed: ${unitsConsumed} kWh. Backend calculation triggered.`);
+
+            // Reset form (in a real app, this would redirect)
+            document.getElementById('reading-input-form').style.display = 'none';
+            document.getElementById('customer-result').style.display = 'none';
+            document.getElementById('account-search').value = '';
+        }
+    </script>
+</body>
+</html>

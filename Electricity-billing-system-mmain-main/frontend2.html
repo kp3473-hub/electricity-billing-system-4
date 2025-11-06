@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Current Usage Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app">
+        <div id="login-screen">
+            <h2>User Login</h2>
+            <input type="number" id="user-id" placeholder="Enter User ID (1-12)" min="1" max="12">
+            <button onclick="loginUser()">Login</button>
+            <p id="login-message"></p>
+        </div>
+
+        <div id="main-app" style="display:none;">
+            <h2 id="welcome-user"></h2>
+            <button onclick="logoutUser()">Logout</button>
+            
+            <hr>
+
+            <h3>Monthly Current Usage Entry</h3>
+            <label for="current-units">Units Used This Month (kWh):</label>
+            <input type="number" id="current-units" min="0">
+            <button onclick="calculateAndSaveBill()">Calculate & Save Bill</button>
+            <p id="calculation-result"></p>
+
+            <hr>
+
+            <h3>Billing History</h3>
+            <div id="bill-history">
+                </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
