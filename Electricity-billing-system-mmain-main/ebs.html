@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Electricity Billing System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f6ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      width: 350px;
+      text-align: center;
+    }
+    h2 {
+      color: #004aad;
+    }
+    input {
+      width: 90%;
+      padding: 8px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      background-color: #004aad;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin-top: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #00317d;
+    }
+    .hidden {
+      display: none;
+    }
+    .info-box {
+      background-color: #e8f0ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+      text-align: left;
+    }
+    .logout {
+      background: crimson;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Electricity Billing System ⚡</h2>
+
+    <!-- Login form -->
+    <div id="loginForm">
+      <input type="text" id="loginUsername" placeholder="Username" required><br>
+      <input type="password" id="loginPassword" placeholder="Password" required><br>
+      <button onclick="login()">Login</button>
+      <p>Don't have an account? <a href="#" onclick="showSignup()">Create one</a></p>
+    </div>
+
+    <!-- Signup form -->
+    <div id="signupForm" class="hidden">
+      <input type="text" id="signupUsername" placeholder="Choose Username" required><br>
+      <input type="password" id="signupPassword" placeholder="Choose Password" required><br>
+      <input type="number" id="signupUnits" placeholder="Enter units consumed" required><br>
+      <button onclick="signup()">Create Account</button>
+      <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="hidden">
+      <h3>Welcome, <span id="userName"></span></h3>
+      <div class="info-box">
+        <p><b>Units Consumed:</b> <span id="unitsUsed"></span> kWh</p>
+        <p><b>Amount Due:</b> ₹<span id="billAmount"></span></p>
+      </div>
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Electricity rate per unit (in ₹) ---
+    const RATE_PER_UNIT = 7.5;
+
+    function showSignup() {
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("signupForm").classList.remove("hidden");
+    }
+
+    function showLogin() {
+      document.getElementById("signupForm").classList.add("hidden");
+      document.getElementById("loginForm").classList.remove("hidden");
+    }
+
+    // --- Create Account ---
+    function signup() {
+      const username = document.getElementById("signupUsername").value.trim();
+      const password = document.getElementById("signupPassword").value;
+      const units = parseFloat(document.getElementById("signupUnits").value);
+
+      if (!username || !password || isNaN(units)) {
+        alert("Please fill all fields correctly!");
+        return;
+      }
+
+      let users = JSON.parse(localStorage.getItem("users")) || {};
+      if (users[username]) {
+        alert("Username already exists! Try another.");
+        return;
+      }
+
+      users[username] = { password, units };
+      localStorage.setItem("users", JSON.stringify(users));
+      alert("Account created successfully! You can now login.");
+      showLogin();
+    }
+
+    // --- Login ---
+    function login() {
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      let users = JSON.parse(localStorage.getItem("users")) || {};
+
+      if (users[username] && users[username].password === password) {
+        localStorage.setItem("loggedInUser", username);
+        showDashboard(username);
+      } else {
+        alert("Invalid username or password!");
+      }
+    }
+
+    // --- Show Dashboard ---
+    function showDashboard(username) {
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("signupForm").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+
+      let users = JSON.parse(localStorage.getItem("users"));
+      let user = users[username];
+      document.getElementById("userName").innerText = username;
+      document.getElementById("unitsUsed").innerText = user.units;
+
+      let bill = calculateBill(user.units);
+      document.getElementById("billAmount").innerText = bill.toFixed(2);
+    }
+
+    // --- Billing formula ---
+    function calculateBill(units) {
+      let amount = 0;
+      if (units <= 100) amount = units * 5;
+      else if (units <= 200) amount = 100 * 5 + (units - 100) * 7;
+      else amount = 100 * 5 + 100 * 7 + (units - 200) * 10;
+      return amount;
+    }
+
+    // --- Logout ---
+    function logout() {
+      localStorage.removeItem("loggedInUser");
+      document.getElementById("dashboard").classList.add("hidden");
+      showLogin();
+    }
+
+    // --- Keep logged in user active ---
+    window.onload = function() {
+      const loggedInUser = localStorage.getItem("loggedInUser");
+      if (loggedInUser) showDashboard(loggedInUser);
+    };
+  </script>
+</body>
+</html>
