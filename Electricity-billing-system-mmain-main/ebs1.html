@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electricity Billing System</title>
+<style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(to right, #004aad, #0078ff);
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .container {
+    background: white;
+    width: 400px;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  h2 {
+    color: #004aad;
+    margin-bottom: 20px;
+  }
+
+  input, textarea {
+    width: 90%;
+    padding: 10px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  button {
+    background: #004aad;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 15px;
+    cursor: pointer;
+    width: 95%;
+    margin-top: 10px;
+    font-weight: 600;
+  }
+
+  button:hover {
+    background: #00317d;
+  }
+
+  a {
+    color: #004aad;
+    text-decoration: none;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .info-box {
+    background-color: #f1f6ff;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: left;
+    margin-top: 15px;
+  }
+
+  .bill-history {
+    background: #eef4ff;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 14px;
+  }
+
+  .logout {
+    background: crimson;
+  }
+
+  .edit {
+    background: #0078ff;
+  }
+
+  .reading {
+    background: #00b894;
+  }
+
+  h4 {
+    color: #004aad;
+    text-align: left;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Electricity Billing System ⚡</h2>
+
+  <!-- Login -->
+  <div id="loginForm">
+    <input id="loginUsername" placeholder="Username" />
+    <input id="loginPassword" type="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <p>Don't have an account? <a href="#" onclick="showSignup()">Create one</a></p>
+  </div>
+
+  <!-- Signup -->
+  <div id="signupForm" class="hidden">
+    <input id="signupUsername" placeholder="Choose Username" />
+    <input id="signupPassword" type="password" placeholder="Choose Password" />
+    <input id="signupName" placeholder="Full Name" />
+    <input id="signupAddress" placeholder="Address" />
+    <input id="signupMeter" placeholder="Meter Number" />
+    <input id="signupUnits" type="number" placeholder="Initial Units Consumed" />
+    <button onclick="signup()">Create Account</button>
+    <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="hidden">
+    <h3>Welcome, <span id="userName"></span></h3>
+    <div class="info-box">
+      <p><b>Address:</b> <span id="userAddress"></span></p>
+      <p><b>Meter No:</b> <span id="userMeter"></span></p>
+      <p><b>Current Units:</b> <span id="unitsUsed"></span> kWh</p>
+      <p><b>Amount Due:</b> ₹<span id="billAmount"></span></p>
+    </div>
+
+    <button class="reading" onclick="addReading()">Add New Reading</button>
+    <button class="edit" onclick="editProfile()">Edit Profile</button>
+    <button class="logout" onclick="logout()">Logout</button>
+
+    <h4>Billing History</h4>
+    <div class="bill-history" id="billHistory"></div>
+  </div>
+</div>
+
+<script>
+const RATE1 = 5, RATE2 = 7, RATE3 = 10;
+
+function showSignup() {
+  document.getElementById("loginForm").classList.add("hidden");
+  document.getElementById("signupForm").classList.remove("hidden");
+}
+
+function showLogin() {
+  document.getElementById("signupForm").classList.add("hidden");
+  document.getElementById("loginForm").classList.remove("hidden");
+}
+
+function signup() {
+  let username = signupUsername.value.trim();
+  let password = signupPassword.value;
+  let name = signupName.value;
+  let address = signupAddress.value;
+  let meter = signupMeter.value;
+  let units = parseFloat(signupUnits.value);
+
+  if (!username || !password || !name || !address || !meter || isNaN(units)) {
+    alert("Please fill all fields!");
+    return;
+  }
+
+  let users = JSON.parse(localStorage.getItem("users")) || {};
+  if (users[username]) {
+    alert("Username already exists!");
+    return;
+  }
+
+  users[username] = {
+    password, name, address, meter,
+    units,
+    history: [{ date: new Date().toLocaleString(), units, amount: calcBill(units) }]
+  };
+
+  localStorage.setItem("users", JSON.stringify(users));
+  alert("Account created successfully!");
+  showLogin();
+}
+
+function login() {
+  let username = loginUsername.value.trim();
+  let password = loginPassword.value;
+  let users = JSON.parse(localStorage.getItem("users")) || {};
+
+  if (users[username] && users[username].password === password) {
+    localStorage.setItem("loggedIn", username);
+    showDashboard(username);
+  } else alert("Invalid login!");
+}
+
+function showDashboard(username) {
+  document.getElementById("loginForm").classList.add("hidden");
+  document.getElementById("signupForm").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+
+  let users = JSON.parse(localStorage.getItem("users"));
+  let u = users[username];
+
+  userName.innerText = u.name;
+  userAddress.innerText = u.address;
+  userMeter.innerText = u.meter;
+  unitsUsed.innerText = u.units;
+  billAmount.innerText = calcBill(u.units).toFixed(2);
+
+  renderHistory(u.history);
+}
+
+function calcBill(units) {
+  if (units <= 100) return units * RATE1;
+  else if (units <= 200) return 100 * RATE1 + (units - 100) * RATE2;
+  else return 100 * RATE1 + 100 * RATE2 + (units - 200) * RATE3;
+}
+
+function renderHistory(history) {
+  billHistory.innerHTML = history.map(
+    h => `<div>📅 ${h.date} — ${h.units} units — ₹${h.amount.toFixed(2)}</div>`
+  ).join("");
+}
+
+function addReading() {
+  let username = localStorage.getItem("loggedIn");
+  let users = JSON.parse(localStorage.getItem("users"));
+  let newUnits = parseFloat(prompt("Enter new total units consumed:"));
+  if (isNaN(newUnits) || newUnits < users[username].units) {
+    alert("Invalid reading!");
+    return;
+  }
+  users[username].units = newUnits;
+  let amount = calcBill(newUnits);
+  users[username].history.push({ date: new Date().toLocaleString(), units: newUnits, amount });
+  localStorage.setItem("users", JSON.stringify(users));
+  showDashboard(username);
+}
+
+function editProfile() {
+  let username = localStorage.getItem("loggedIn");
+  let users = JSON.parse(localStorage.getItem("users"));
+  let u = users[username];
+
+  let newName = prompt("Enter new name:", u.name) || u.name;
+  let newAddr = prompt("Enter new address:", u.address) || u.address;
+  let newMeter = prompt("Enter new meter number:", u.meter) || u.meter;
+
+  u.name = newName;
+  u.address = newAddr;
+  u.meter = newMeter;
+
+  users[username] = u;
+  localStorage.setItem("users", JSON.stringify(users));
+  showDashboard(username);
+}
+
+function logout() {
+  localStorage.removeItem("loggedIn");
+  document.getElementById("dashboard").classList.add("hidden");
+  showLogin();
+}
+
+window.onload = function() {
+  let logged = localStorage.getItem("loggedIn");
+  if (logged) showDashboard(logged);
+};
+</script>
+
+</body>
+</html>
