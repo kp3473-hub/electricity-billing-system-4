@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Smart Billing (Web) — Java features in HTML/JS</title>
+<style>
+  :root{
+    --accent:#004aad;
+    --accent-dark:#002f7a;
+    --bg1:linear-gradient(135deg,#004aad,#007aff);
+    --card:#ffffff;
+  }
+  body{
+    margin:0; font-family: Inter, "Segoe UI", Roboto, Arial; background:var(--bg1);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .app {
+    width:980px; max-width:98%; background:var(--card); border-radius:14px; box-shadow:0 15px 50px rgba(0,0,0,0.25);
+    overflow:hidden; display:grid; grid-template-columns:380px 1fr;
+  }
+  .left {
+    padding:26px; background:linear-gradient(180deg,#fff,#f6fbff); border-right:1px solid rgba(0,0,0,0.04);
+  }
+  .right { padding:22px; min-height:480px; }
+  h1 { margin:0; font-size:20px; color:var(--accent); }
+  label{ display:block; font-size:13px; margin-top:10px; color:#333; }
+  input, select, textarea { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d9e6ff; margin-top:6px; box-sizing:border-box; font-size:14px; }
+  button { background:var(--accent); color:#fff; border:0; padding:10px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
+  button.secondary{ background:#6ea6ff; }
+  small.link{ color:var(--accent); cursor:pointer; display:inline-block; margin-top:8px; }
+  .muted{ color:#666; font-size:13px; margin-top:6px; }
+
+  .card { background:#fff; border-radius:10px; padding:14px; box-shadow:0 6px 18px rgba(2,8,23,0.06); margin-bottom:12px; }
+  .hidden{ display:none; }
+  .info-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #eef5ff; font-size:14px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+  th,td{ border:1px solid #e6f0ff; padding:8px; text-align:left; }
+  th{ background:var(--accent); color:#fff; font-weight:600; font-size:13px; }
+
+  /* Modal */
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:2000; }
+  .modal { background:#fff; border-radius:10px; padding:18px; width:420px; max-width:92%; box-shadow:0 10px 40px rgba(0,0,0,0.35);}
+  .row{ display:flex; gap:8px; }
+  .row > * { flex:1; }
+
+  /* admin table small */
+  .small-btn{ background:#007a33; padding:6px 8px; border-radius:6px; font-size:13px; }
+  .danger{ background:#c62828; }
+
+  /* responsive */
+  @media (max-width:920px){
+    .app{ grid-template-columns: 1fr; width:760px; }
+    .left{ order:2; }
+    .right{ order:1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" role="application" aria-label="Smart Billing">
+  <div class="left">
+    <h1>⚡ Smart Electricity Billing</h1>
+    <p class="muted">Sign up, login, reset password (via code), update readings, and admin control — persistent across restarts.</p>
+
+    <!-- LOGIN CARD -->
+    <div id="card-login" class="card">
+      <h3 style="margin:0 0 8px 0;color:var(--accent)">Login</h3>
+      <label>Username<input id="login-user" /></label>
+      <label>Password<input id="login-pass" type="password" /></label>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="btn-login">Login</button>
+        <button id="btn-go-signup" class="secondary">Create Account</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+        <small class="link" id="link-reset">Forgot Password?</small>
+        <small style="flex:1"></small>
+        <small class="link" id="link-admin">Admin</small>
+      </div>
+      <div style="margin-top:8px" id="rememberNote" class="muted"></div>
+    </div>
+
+    <!-- SIGNUP CARD -->
+    <div id="card-signup" class="card hidden">
+      <h3 style="margin:0 0 8px 0;color:var(--accent)">Create Account</h3>
+      <label>Username<input id="su-user" /></label>
+      <label>Password<input id="su-pass" type="password" /></label>
+      <label>Full name<input id="su-name" /></label>
+      <label>Address<input id="su-address" /></label>
+      <label>Email<input id="su-email" /></label>
+      <label>Phone<input id="su-phone" /></label>
+      <label>Meter Number<input id="su-meter" /></label>
+      <label>Initial Units<input id="su-units" type="number" min="0" /></label>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="btn-signup">Register</button>
+        <button id="btn-back-to-login" class="secondary">Back</button>
+      </div>
+    </div>
+
+    <!-- ADMIN LOGIN (small) -->
+    <div id="card-admin-login" class="card hidden">
+      <h3 style="margin:0 0 8px 0;color:var(--accent)">Admin Login</h3>
+      <label>Admin Password<input id="admin-pass" type="password" /></label>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="btn-admin-login">Open Admin</button>
+        <button id="btn-admin-back" class="secondary">Back</button>
+      </div>
+      <div class="muted" style="margin-top:8px">Default admin password: <b>admin123</b> — change in code if needed.</div>
+    </div>
+
+    <!-- ADMIN ACTION (visible on login screen) -->
+    <div id="card-admin-action" class="card hidden">
+      <h3 style="margin:0 0 8px 0;color:var(--accent)">Admin Panel</h3>
+      <div class="muted">You are in admin mode. Use the table on the right to edit users.</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="btn-admin-refresh">Refresh Users</button>
+        <button id="btn-admin-close" class="secondary">Close Admin</button>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="margin-top:8px;font-size:13px;color:#555">Storage: browser <b>localStorage</b>. Data persists until cleared.</div>
+  </div>
+
+  <div class="right">
+    <!-- DASHBOARD / ADMIN area -->
+    <div id="panel-welcome" class="card">
+      <h3 style="margin:0 0 6px 0">Welcome</h3>
+      <div class="muted">Please login or create an account on the left. Admin button lets you manage all users.</div>
+    </div>
+
+    <!-- User Dashboard -->
+    <div id="panel-dashboard" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="dash-title" style="margin:0;color:var(--accent)"></h3>
+        <div>
+          <button id="btn-edit-profile" class="secondary">Edit Profile</button>
+          <button id="btn-logout" class="danger" style="margin-left:8px;background:#c62828">Logout</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="info-row"><div>Name</div><div id="dash-name"></div></div>
+        <div class="info-row"><div>Address</div><div id="dash-address"></div></div>
+        <div class="info-row"><div>Email</div><div id="dash-email"></div></div>
+        <div class="info-row"><div>Phone</div><div id="dash-phone"></div></div>
+        <div class="info-row"><div>Meter No</div><div id="dash-meter"></div></div>
+        <div class="info-row"><div>Units Consumed</div><div id="dash-units"></div></div>
+        <div class="info-row"><div>Amount Due</div><div id="dash-bill"></div></div>
+        <div class="info-row"><div>Due Date</div><div id="dash-due"></div></div>
+
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <input id="input-new-units" placeholder="Enter new total units" type="number" min="0" />
+          <button id="btn-update-units">Update Units</button>
+        </div>
+
+        <h4 style="margin-top:12px;color:var(--accent)">Billing History</h4>
+        <div id="history-list" style="max-height:160px; overflow:auto; border-radius:8px; padding:8px; background:#fbfdff;"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN PANEL (right) -->
+    <div id="panel-admin" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0;color:var(--accent)">Admin — All Users</h3>
+        <div>
+          <button id="btn-export-json" class="secondary">Export JSON</button>
+          <button id="btn-close-admin" style="margin-left:8px">Close</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <table id="tbl-users">
+          <thead><tr><th>User</th><th>Name</th><th>Units</th><th>Bill</th><th>Due</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div style="margin-top:10px">
+          <small class="muted">Select Edit to change name/address/phone/units — changes persist and will show for user on next refresh/login.</small>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="modal-root"></div>
+
+<script>
+/* ========= Utilities & storage ========= */
+const STORAGE_KEY = 'smart_billing_users_v1';
+const SESSION_KEY = 'smart_billing_session_v1';
+const RESET_CODES_KEY = 'smart_billing_reset_codes_v1'; // stored to localStorage so flow persists if page closed
+
+// Billing rates (same as Java app)
+const RATE1 = 5, RATE2 = 7, RATE3 = 10;
+
+function loadUsers(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveUsers(obj){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+}
+function saveSession(username){
+  if(username) localStorage.setItem(SESSION_KEY, username);
+  else localStorage.removeItem(SESSION_KEY);
+}
+function readSession(){ return localStorage.getItem(SESSION_KEY); }
+function loadResetCodes(){ try{ return JSON.parse(localStorage.getItem(RESET_CODES_KEY) || '{}'); }catch(e){ return {}; } }
+function saveResetCodes(c){ localStorage.setItem(RESET_CODES_KEY, JSON.stringify(c)); }
+
+/* ========== Simple hash (not cryptographically secure) ========= */
+function simpleHash(s){
+  // simple deterministic hash -> hex (for password storage)
+  let h=0;
+  for(let i=0;i<s.length;i++){ h = (h<<5) - h + s.charCodeAt(i); h |= 0; }
+  return (h >>> 0).toString(16);
+}
+
+/* ========== Billing calculation ========== */
+function calcBill(units){
+  units = Number(units) || 0;
+  let amount = 0;
+  if(units <= 100) amount = units * RATE1;
+  else if(units <= 200) amount = 100 * RATE1 + (units - 100) * RATE2;
+  else amount = 100 * RATE1 + 100 * RATE2 + (units - 200) * RATE3;
+  return Number(amount.toFixed(2));
+}
+
+/* ========== Helpers: modal and notifications ========== */
+const modalRoot = document.getElementById('modal-root');
+function showModal(title, innerHTML, buttons=[]){
+  const backdrop = document.createElement('div'); backdrop.className='modal-backdrop';
+  const modal = document.createElement('div'); modal.className='modal';
+  modal.innerHTML = `<h3 style="margin:0 0 10px 0;color:${getComputedStyle(document.documentElement).getPropertyValue('--accent')||'#004aad'}">${title}</h3>` + innerHTML;
+  const btnRow = document.createElement('div'); btnRow.style.marginTop='12px'; btnRow.style.display='flex'; btnRow.style.justifyContent='flex-end'; btnRow.style.gap='8px';
+  buttons.forEach(b=>{
+    const btn = document.createElement('button');
+    btn.textContent = b.label;
+    btn.className = b.className || '';
+    btn.onclick = ()=>{ try{ b.onClick(); } catch(e){ console.error(e); } backdrop.remove(); };
+    btnRow.appendChild(btn);
+  });
+  modal.appendChild(btnRow);
+  backdrop.appendChild(modal);
+  modalRoot.appendChild(backdrop);
+  return backdrop;
+}
+function showAlert(msg){ showModal('Notice', `<div>${escapeHtml(msg)}</div>`, [{label:'OK'}]); }
+function showError(msg){ showModal('Error', `<div style="color:#c62828">${escapeHtml(msg)}</div>`, [{label:'OK'}]); }
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+/* ========== Data model helpers ========== */
+function createUserObj({username, passwordPlain, name='', address='', email='', phone='', meter='', units=0}){
+  const now = new Date().toISOString();
+  const bill = calcBill(units);
+  return {
+    username,
+    passwordHash: simpleHash(passwordPlain),
+    name, address, email, phone, meter,
+    units: Number(units),
+    bill,
+    dueDate: new Date(Date.now() + 15*24*60*60*1000).toISOString().slice(0,10),
+    history: [{ date: now, units: Number(units), bill }],
+    createdAt: now
+  };
+}
+
+/* ========== UI wiring ========= */
+const usersTableBody = document.querySelector('#tbl-users tbody');
+const panelDashboard = document.getElementById('panel-dashboard');
+const panelAdmin = document.getElementById('panel-admin');
+const panelWelcome = document.getElementById('panel-welcome');
+
+function refreshRememberNote(){
+  const logged = readSession();
+  const el = document.getElementById('rememberNote');
+  if(logged){ el.innerText = `Auto-login active: ${logged} — you will remain logged in until you logout.`; }
+  else el.innerText = 'No user is currently remembered.';
+}
+
+/* LOGIN / SIGNUP flows */
+document.getElementById('btn-go-signup').onclick = ()=>{ toggleLeft('signup'); };
+document.getElementById('btn-back-to-login').onclick = ()=>{ toggleLeft('login'); };
+document.getElementById('btn-signup').onclick = ()=>{
+  const u = document.getElementById('su-user').value.trim();
+  const p = document.getElementById('su-pass').value;
+  const name = document.getElementById('su-name').value.trim();
+  const address = document.getElementById('su-address').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const phone = document.getElementById('su-phone').value.trim();
+  const meter = document.getElementById('su-meter').value.trim();
+  const units = Number(document.getElementById('su-units').value) || 0;
+  if(!u||!p||!name){ showError('Username, password and name are required.'); return; }
+  const users = loadUsers();
+  if(users[u]){ showError('Username already exists. Choose another.'); return; }
+  users[u] = createUserObj({username:u,passwordPlain:p,name,address,email,phone,meter,units});
+  saveUsers(users);
+  showAlert('Account created. You can now log in.');
+  toggleLeft('login');
+};
+
+document.getElementById('btn-login').onclick = ()=>{
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const users = loadUsers();
+  if(!u||!p){ showError('Enter username & password.'); return; }
+  if(!users[u]){ showError('No such user.'); return; }
+  if(users[u].passwordHash !== simpleHash(p)){ showError('Incorrect password.'); return; }
+  // success
+  saveSession(u);
+  openDashboard(u);
+};
+
+document.getElementById('btn-logout').onclick = ()=>{
+  saveSession(null);
+  panelDashboard.classList.add('hidden');
+  panelAdmin.classList.add('hidden');
+  panelWelcome.classList.remove('hidden');
+  toggleLeft('login');
+  refreshRememberNote();
+};
+
+/* update units */
+document.getElementById('btn-update-units').onclick = ()=>{
+  const u = readSession();
+  if(!u){ showError('No user logged in'); return; }
+  const raw = document.getElementById('input-new-units').value;
+  const newUnits = Number(raw);
+  if(isNaN(newUnits) || newUnits < 0){ showError('Enter valid non-negative units.'); return; }
+  const users = loadUsers();
+  const user = users[u];
+  if(!user){ showError('User not found (session mismatch).'); return; }
+  if(newUnits < user.units){ showError('New reading is less than previous units. If meter was reset enter correct total.'); return; }
+  user.units = newUnits;
+  user.bill = calcBill(newUnits);
+  user.dueDate = new Date(Date.now()+15*24*60*60*1000).toISOString().slice(0,10);
+  user.history = user.history || [];
+  user.history.push({ date: new Date().toISOString(), units: newUnits, bill: user.bill });
+  saveUsers(users);
+  showAlert('Units updated. Bill recalculated.');
+  openDashboard(u);
+};
+
+/* edit profile */
+document.getElementById('btn-edit-profile').onclick = ()=>{
+  const u = readSession();
+  if(!u){ showError('No user logged in'); return; }
+  const users = loadUsers();
+  const user = users[u];
+  const body = document.createElement('div');
+  body.innerHTML = `
+    <label>Name<input id="m-name" value="${escapeHtml(user.name||'')}" /></label>
+    <label>Address<input id="m-address" value="${escapeHtml(user.address||'')}" /></label>
+    <label>Email<input id="m-email" value="${escapeHtml(user.email||'')}" /></label>
+    <label>Phone<input id="m-phone" value="${escapeHtml(user.phone||'')}" /></label>
+    <label>Meter<input id="m-meter" value="${escapeHtml(user.meter||'')}" /></label>
+  `;
+  const modal = showModal('Edit Profile', body.innerHTML, [
+    { label:'Save', onClick:()=>{
+        const uobj = loadUsers()[u];
+        uobj.name = document.getElementById('m-name').value.trim();
+        uobj.address = document.getElementById('m-address').value.trim();
+        uobj.email = document.getElementById('m-email').value.trim();
+        uobj.phone = document.getElementById('m-phone').value.trim();
+        uobj.meter = document.getElementById('m-meter').value.trim();
+        saveUsers(loadUsers());
+        // note: we replaced values from DOM of modal template instead of reading closures, so re-save properly:
+        const all = loadUsers();
+        all[u] = uobj;
+        saveUsers(all);
+        showAlert('Profile saved.');
+        openDashboard(u);
+    } }
+  ]);
+};
+
+/* password reset flow (generate code, show notification, ask code, set new pass) */
+document.getElementById('link-reset').onclick = async ()=>{
+  const askUser = prompt('Enter username to reset password:');
+  if(!askUser) return;
+  const users = loadUsers();
+  if(!users[askUser]){ showError('No such user.'); return; }
+  // generate numeric 6-digit code and store it
+  const code = String(Math.floor(100000 + Math.random()*900000));
+  const codes = loadResetCodes();
+  codes[askUser] = { code, created: Date.now() };
+  saveResetCodes(codes);
+
+  // show simulated notification modal containing the code (this simulates SMS)
+  showModal('Verification Notification', `<div>A verification code was "sent" to phone: <b>${escapeHtml(users[askUser].phone||'(no phone)')}</b></div>
+    <div style="margin-top:8px;font-weight:700;font-size:18px">Code: ${code}</div>
+    <div style="margin-top:8px;color:#666;font-size:13px">(Use this code to reset your password)</div>`, [{label:'OK'}]);
+
+  // now prompt to enter code
+  setTimeout(()=>{
+    const entered = prompt('Enter the verification code you received (from notification):');
+    if(!entered) return;
+    const stored = loadResetCodes()[askUser];
+    if(!stored || stored.code !== entered){ showError('Invalid or expired code.'); return; }
+    // allow new password
+    const newPass = prompt('Enter new password (min 4 chars):');
+    if(!newPass || newPass.length<4){ showError('Password too short.'); return; }
+    users[askUser].passwordHash = simpleHash(newPass);
+    saveUsers(users);
+    // remove code
+    const newCodes = loadResetCodes(); delete newCodes[askUser]; saveResetCodes(newCodes);
+    showAlert('Password reset successfully. Please login with new password.');
+  }, 300);
+};
+
+/* ADMIN flows */
+document.getElementById('link-admin').onclick = ()=>{ toggleLeft('admin-login'); };
+
+document.getElementById('btn-admin-back').onclick = ()=>{ toggleLeft('login'); };
+document.getElementById('btn-admin-login').onclick = ()=>{
+  const pass = document.getElementById('admin-pass').value;
+  if(pass === 'admin123'){ openAdmin(); toggleLeft('login'); } else showError('Incorrect admin password.');
+};
+
+document.getElementById('btn-close-admin').onclick = ()=>{ panelAdmin.classList.add('hidden'); panelWelcome.classList.remove('hidden'); };
+
+document.getElementById('btn-export-json').onclick = ()=>{
+  const all = loadUsers();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(all,null,2)],{type:'application/json'}));
+  a.download = 'smart_billing_export.json';
+  a.click();
+};
+
+/* Admin edit user row */
+function openAdmin(){
+  panelWelcome.classList.add('hidden');
+  panelAdmin.classList.remove('hidden');
+  populateAdminTable();
+}
+function populateAdminTable(){
+  const users = loadUsers();
+  usersTableBody.innerHTML = '';
+  Object.keys(users).sort().forEach(u=>{
+    const it = users[u];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(u)}</td>
+      <td>${escapeHtml(it.name||'')}</td>
+      <td>${escapeHtml(String(it.units||0))}</td>
+      <td>₹${escapeHtml(String(it.bill||0))}</td>
+      <td>${escapeHtml(it.dueDate||'')}</td>
+      <td>
+        <button class="small-btn" data-user="${u}" onclick="adminEditUser('${u}')">Edit</button>
+        <button style="background:#d84315;color:#fff;border:0;padding:6px;border-radius:6px;margin-left:6px" onclick="adminDeleteUser('${u}')">Delete</button>
+      </td>`;
+    usersTableBody.appendChild(tr);
+  });
+}
+window.adminEditUser = function(username){
+  const all = loadUsers();
+  const u = all[username];
+  if(!u) { showError('User not found'); return; }
+  const body = `
+    <label>Name<input id="adm-name" value="${escapeHtml(u.name||'')}" /></label>
+    <label>Address<input id="adm-address" value="${escapeHtml(u.address||'')}" /></label>
+    <label>Phone<input id="adm-phone" value="${escapeHtml(u.phone||'')}" /></label>
+    <label>Units<input id="adm-units" type="number" min="0" value="${escapeHtml(String(u.units||0))}" /></label>
+  `;
+  showModal('Edit user: '+username, body, [
+    { label:'Save', onClick:()=>{
+        const all2 = loadUsers();
+        const target = all2[username];
+        target.name = document.getElementById('adm-name').value.trim();
+        target.address = document.getElementById('adm-address').value.trim();
+        target.phone = document.getElementById('adm-phone').value.trim();
+        const newUnits = Number(document.getElementById('adm-units').value) || 0;
+        target.units = newUnits;
+        target.bill = calcBill(newUnits);
+        target.dueDate = new Date(Date.now()+15*24*60*60*1000).toISOString().slice(0,10);
+        target.history = target.history || [];
+        target.history.push({ date: new Date().toISOString(), units: newUnits, bill: target.bill });
+        saveUsers(all2);
+        populateAdminTable();
+        showAlert('User updated. Changes will be visible to user on next dashboard refresh/login.');
+    } }
+  ]);
+};
+window.adminDeleteUser = function(username){
+  if(!confirm('Delete user "'+username+'" ? This is permanent.')) return;
+  const all = loadUsers();
+  delete all[username]; saveUsers(all); populateAdminTable(); showAlert('Deleted.');
+};
+
+/* Open dashboard for username */
+function openDashboard(username){
+  const users = loadUsers();
+  const u = users[username];
+  if(!u) { showError('User not found'); return; }
+  panelWelcome.classList.add('hidden');
+  panelAdmin.classList.add('hidden');
+  panelDashboard.classList.remove('hidden');
+
+  document.getElementById('dash-title').innerText = `Hello, ${u.name||u.username}`;
+  document.getElementById('dash-name').innerText = u.name || '';
+  document.getElementById('dash-address').innerText = u.address || '';
+  document.getElementById('dash-email').innerText = u.email || '';
+  document.getElementById('dash-phone').innerText = u.phone || '';
+  document.getElementById('dash-meter').innerText = u.meter || '';
+  document.getElementById('dash-units').innerText = `${u.units} kWh`;
+  document.getElementById('dash-bill').innerText = `₹${u.bill.toFixed(2)}`;
+  document.getElementById('dash-due').innerText = u.dueDate || '';
+
+  // history
+  const hist = (u.history || []).slice().reverse();
+  const histEl = document.getElementById('history-list');
+  histEl.innerHTML = hist.length ? hist.map(h=>`<div style="padding:8px;border-bottom:1px solid #eef6ff"><div style="font-weight:600">${new Date(h.date).toLocaleString()}</div><div style="color:#333">${h.units} units — ₹${h.bill.toFixed(2)}</div></div>`).join('') : '<div class="muted">No history yet.</div>';
+  refreshRememberNote();
+}
+
+/* Toggle left cards (login/signup/admin-login) */
+function toggleLeft(mode){
+  document.getElementById('card-login').classList.toggle('hidden', mode !== 'login');
+  document.getElementById('card-signup').classList.toggle('hidden', mode !== 'signup');
+  document.getElementById('card-admin-login').classList.toggle('hidden', mode !== 'admin-login');
+}
+
+/* Auto-login on page load if session exists */
+(function init(){
+  // create demo user if none
+  const users = loadUsers();
+  if(Object.keys(users).length === 0){
+    users['demo'] = createUserObj({ username:'demo', passwordPlain:'demo123', name:'Demo User', address:'Demo Addr', email:'demo@x.com', phone:'9999999999', meter:'MTR-001', units:120 });
+    saveUsers(users);
+  }
+
+  // check session
+  const sess = readSession();
+  if(sess && loadUsers()[sess]){
+    // auto open dashboard
+    openDashboard(sess);
+    // keep left showing login card but reflect logged state
+    toggleLeft('login');
+  } else {
+    toggleLeft('login');
+  }
+  refreshRememberNote();
+})();
+
+/* small utility: clear session on window close? no — we persist across restarts by design */
+/* End of script */
+</script>
+
+</body>
+</html>
