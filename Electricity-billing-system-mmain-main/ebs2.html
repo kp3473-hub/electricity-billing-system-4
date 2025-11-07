@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Electricity Billing System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to bottom right, #004aad, #007aff);
+      color: #222;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      width: 380px;
+      padding: 30px;
+      text-align: center;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    h2 {
+      color: #004aad;
+      margin-bottom: 10px;
+    }
+
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    button {
+      background-color: #004aad;
+      color: white;
+      border: none;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 95%;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #002f7a;
+      transform: scale(1.03);
+    }
+
+    a {
+      color: #004aad;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .info-card {
+      background: #eaf0ff;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: left;
+      margin-top: 10px;
+    }
+
+    .logout {
+      background-color: crimson;
+    }
+
+    .admin-btn {
+      background-color: darkgreen;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+    }
+
+    th {
+      background: #004aad;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>⚡ Smart Electricity Billing ⚡</h2>
+
+    <!-- LOGIN -->
+    <div id="loginForm">
+      <input type="text" id="loginUsername" placeholder="Username"><br>
+      <input type="password" id="loginPassword" placeholder="Password"><br>
+      <button onclick="login()">Login</button>
+      <p>Don’t have an account? <a href="#" onclick="showSignup()">Create one</a></p>
+      <p><a href="#" onclick="showAdmin()">Admin Login</a></p>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="signupForm" class="hidden">
+      <input type="text" id="signupUsername" placeholder="Username"><br>
+      <input type="password" id="signupPassword" placeholder="Password"><br>
+      <input type="text" id="signupName" placeholder="Full Name"><br>
+      <input type="text" id="signupAddress" placeholder="Address"><br>
+      <input type="email" id="signupEmail" placeholder="Email"><br>
+      <input type="tel" id="signupPhone" placeholder="Phone Number"><br>
+      <input type="number" id="signupUnits" placeholder="Units Consumed"><br>
+      <button onclick="signup()">Register</button>
+      <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
+    </div>
+
+    <!-- USER DASHBOARD -->
+    <div id="dashboard" class="hidden">
+      <h3>Welcome, <span id="userName"></span></h3>
+      <div class="info-card">
+        <p><b>Address:</b> <span id="userAddress"></span></p>
+        <p><b>Email:</b> <span id="userEmail"></span></p>
+        <p><b>Phone:</b> <span id="userPhone"></span></p>
+        <p><b>Units Consumed:</b> <span id="unitsUsed"></span> kWh</p>
+        <p><b>Amount Due:</b> ₹<span id="billAmount"></span></p>
+        <p><b>Due Date:</b> <span id="dueDate"></span></p>
+      </div>
+      <input type="number" id="newUnits" placeholder="Update new units">
+      <button onclick="updateUnits()">Update Units</button>
+      <button class="logout" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div id="adminPanel" class="hidden">
+      <h3>Admin Dashboard</h3>
+      <div id="userTableContainer"></div>
+      <button class="logout" onclick="closeAdmin()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const RATE_PER_UNIT = 7.5;
+
+    function showSignup() {
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("signupForm").classList.remove("hidden");
+      document.getElementById("dashboard").classList.add("hidden");
+      document.getElementById("adminPanel").classList.add("hidden");
+    }
+
+    function showLogin() {
+      document.getElementById("signupForm").classList.add("hidden");
+      document.getElementById("loginForm").classList.remove("hidden");
+      document.getElementById("dashboard").classList.add("hidden");
+      document.getElementById("adminPanel").classList.add("hidden");
+    }
+
+    function showAdmin() {
+      let password = prompt("Enter Admin Password:");
+      if (password === "admin123") {
+        renderAdminPanel();
+        document.getElementById("loginForm").classList.add("hidden");
+        document.getElementById("adminPanel").classList.remove("hidden");
+      } else {
+        alert("Incorrect Admin Password!");
+      }
+    }
+
+    function closeAdmin() {
+      showLogin();
+    }
+
+    // --- SIGNUP ---
+    function signup() {
+      let username = document.getElementById("signupUsername").value.trim();
+      let password = document.getElementById("signupPassword").value;
+      let name = document.getElementById("signupName").value.trim();
+      let address = document.getElementById("signupAddress").value.trim();
+      let email = document.getElementById("signupEmail").value.trim();
+      let phone = document.getElementById("signupPhone").value.trim();
+      let units = parseFloat(document.getElementById("signupUnits").value);
+
+      if (!username || !password || !name || !address || !email || !phone || isNaN(units)) {
+        alert("Please fill all fields!");
+        return;
+      }
+
+      let users = JSON.parse(localStorage.getItem("users")) || {};
+      if (users[username]) {
+        alert("Username already exists!");
+        return;
+      }
+
+      let bill = calculateBill(units);
+      let dueDate = getDueDate(15);
+
+      users[username] = { password, name, address, email, phone, units, bill, dueDate };
+      localStorage.setItem("users", JSON.stringify(users));
+
+      alert("Account created successfully!");
+      showLogin();
+    }
+
+    // --- LOGIN ---
+    function login() {
+      let username = document.getElementById("loginUsername").value.trim();
+      let password = document.getElementById("loginPassword").value;
+      let users = JSON.parse(localStorage.getItem("users")) || {};
+
+      if (users[username] && users[username].password === password) {
+        localStorage.setItem("loggedInUser", username);
+        showDashboard(username);
+      } else {
+        alert("Invalid login details!");
+      }
+    }
+
+    // --- BILL CALC ---
+    function calculateBill(units) {
+      let amount = 0;
+      if (units <= 100) amount = units * 5;
+      else if (units <= 200) amount = 100 * 5 + (units - 100) * 7;
+      else amount = 100 * 5 + 100 * 7 + (units - 200) * 10;
+      return amount;
+    }
+
+    function getDueDate(days) {
+      let d = new Date();
+      d.setDate(d.getDate() + days);
+      return d.toDateString();
+    }
+
+    // --- DASHBOARD ---
+    function showDashboard(username) {
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("signupForm").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+
+      let users = JSON.parse(localStorage.getItem("users"));
+      let u = users[username];
+      document.getElementById("userName").innerText = u.name;
+      document.getElementById("userAddress").innerText = u.address;
+      document.getElementById("userEmail").innerText = u.email;
+      document.getElementById("userPhone").innerText = u.phone;
+      document.getElementById("unitsUsed").innerText = u.units;
+      document.getElementById("billAmount").innerText = u.bill.toFixed(2);
+      document.getElementById("dueDate").innerText = u.dueDate;
+    }
+
+    // --- UPDATE UNITS ---
+    function updateUnits() {
+      let username = localStorage.getItem("loggedInUser");
+      let users = JSON.parse(localStorage.getItem("users"));
+      let newUnits = parseFloat(document.getElementById("newUnits").value);
+      if (isNaN(newUnits) || newUnits <= 0) {
+        alert("Enter valid units!");
+        return;
+      }
+      users[username].units = newUnits;
+      users[username].bill = calculateBill(newUnits);
+      users[username].dueDate = getDueDate(15);
+      localStorage.setItem("users", JSON.stringify(users));
+      alert("Units updated successfully!");
+      showDashboard(username);
+    }
+
+    // --- LOGOUT ---
+    function logout() {
+      localStorage.removeItem("loggedInUser");
+      showLogin();
+    }
+
+    // --- ADMIN PANEL ---
+    function renderAdminPanel() {
+      let users = JSON.parse(localStorage.getItem("users")) || {};
+      let html = "<table><tr><th>User</th><th>Name</th><th>Units</th><th>Bill</th><th>Due</th></tr>";
+      for (let u in users) {
+        html += `<tr><td>${u}</td><td>${users[u].name}</td><td>${users[u].units}</td><td>₹${users[u].bill.toFixed(2)}</td><td>${users[u].dueDate}</td></tr>`;
+      }
+      html += "</table>";
+      document.getElementById("userTableContainer").innerHTML = html;
+    }
+
+    // --- AUTO LOGIN ---
+    window.onload = function() {
+      let logged = localStorage.getItem("loggedInUser");
+      if (logged) showDashboard(logged);
+    };
+  </script>
+</body>
+</html>
